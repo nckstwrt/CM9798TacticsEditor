@@ -613,53 +613,76 @@ namespace CM9798TacticsEditor
 
         private void LoadEXEData()
         {
-            using (var fs = File.Open(textBoxExeFile.Text, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            if (string.IsNullOrEmpty(textBoxExeFile.Text))
             {
-                // Read the formation names
-                string[] ourFormationNames = new string[Formation.Formations.Length];
-                fs.Seek(0x149660, SeekOrigin.Begin);
-                for (int i = 0; i < Formation.Formations.Length; i++)
+                MessageBox.Show("Please select a CM9798 v2.93 CM2E16.EXE first!", "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                using (var fs = File.Open(textBoxExeFile.Text, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 {
-                    var blankBytes = new byte[Formation.FormationsStringSize[i] + 1];
-                    fs.Read(blankBytes, 0, blankBytes.Length);
-                    ourFormationNames[i] = Encoding.ASCII.GetString(blankBytes);
-                }
-
-                // Read Positions
-                var grid = new byte[(5 * 6) + 1];
-                var grid2 = new byte[(5 * 6) + 1];
-
-                fs.Seek(0x153EE4, SeekOrigin.Begin);
-
-                Formations = new List<Formation>();
-
-                for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
-                {
-                    var formation = new Formation();
-                    formation.Name = ourFormationNames[formationNo];
-                    formation.MaxNameSize = Formation.FormationsStringSize[formationNo];
-
-                    for (int i = 0; i < 11; i++)
+                    // Check it's actually a 2.93
+                    fs.Seek(0x145598, SeekOrigin.Begin);
+                    byte[] versionBytes = new byte[3];
+                    fs.Read(versionBytes, 0, 3);
+                    if (versionBytes[0] != '2' || versionBytes[1] != '.' || versionBytes[2] != '9')
                     {
-                        formation.Players[i].Position = fs.ReadByte();
+                        MessageBox.Show("The executable: " + textBoxExeFile.Text + " Does not appear to be a CM9798 v2.93 CM2E16.EXE!", "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
                     }
 
-                    // Read Subs1
-                    fs.Read(formation.subs1, 0, 5);
-
-                    for (int i = 0; i < 11; i++)
+                    // Read the formation names
+                    string[] ourFormationNames = new string[Formation.Formations.Length];
+                    fs.Seek(0x149660, SeekOrigin.Begin);
+                    for (int i = 0; i < Formation.Formations.Length; i++)
                     {
-                        formation.Players[i].RunningTo = fs.ReadByte();
+                        var blankBytes = new byte[Formation.FormationsStringSize[i] + 1];
+                        fs.Read(blankBytes, 0, blankBytes.Length);
+                        ourFormationNames[i] = Encoding.ASCII.GetString(blankBytes);
                     }
 
-                    // Read Subs2
-                    fs.Read(formation.subs2, 0, 5);
+                    // Read Positions
+                    var grid = new byte[(5 * 6) + 1];
+                    var grid2 = new byte[(5 * 6) + 1];
 
-                    Formations.Add(formation);
+                    fs.Seek(0x153EE4, SeekOrigin.Begin);
+
+                    Formations = new List<Formation>();
+
+                    for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
+                    {
+                        var formation = new Formation();
+                        formation.Name = ourFormationNames[formationNo];
+                        formation.MaxNameSize = Formation.FormationsStringSize[formationNo];
+
+                        for (int i = 0; i < 11; i++)
+                        {
+                            formation.Players[i].Position = fs.ReadByte();
+                        }
+
+                        // Read Subs1
+                        fs.Read(formation.subs1, 0, 5);
+
+                        for (int i = 0; i < 11; i++)
+                        {
+                            formation.Players[i].RunningTo = fs.ReadByte();
+                        }
+
+                        // Read Subs2
+                        fs.Read(formation.subs2, 0, 5);
+
+                        Formations.Add(formation);
+                    }
+
+                    selectedFormation = 0;
+                    Invalidate();
                 }
-
-                selectedFormation = 0;
-                Invalidate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("An error occurred when loading the executable: " + textBoxExeFile.Text + "\r\n\r\nError: " + ex.Message, "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -674,40 +697,47 @@ namespace CM9798TacticsEditor
 
         private void buttonSave_Click(object sender, EventArgs e)
         {
-            using (var fs = File.Open(textBoxExeFile.Text, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+            try
             {
-                // Write new formation names
-                fs.Seek(0x149660, SeekOrigin.Begin);
-                for (int i = 0; i < Formations.Count; i++)
+                using (var fs = File.Open(textBoxExeFile.Text, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
                 {
-                    var blankBytes = new byte[Formation.FormationsStringSize[i] + 1];
-                    var wordBytes = Encoding.ASCII.GetBytes(Formations[i].Name);
-                    Array.Copy(wordBytes, blankBytes, wordBytes.Length);
-                    fs.Write(blankBytes, 0, blankBytes.Length);
-                }
-
-                // Write the new formations
-                fs.Seek(0x153EE4, SeekOrigin.Begin);
-                for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
-                {
-                    // Output Players
-                    var players = Formations[formationNo].Players;
-                    for (int i = 0; i < 11; i++)
+                    // Write new formation names
+                    fs.Seek(0x149660, SeekOrigin.Begin);
+                    for (int i = 0; i < Formations.Count; i++)
                     {
-                        fs.WriteByte((byte)players[i].Position);
+                        var blankBytes = new byte[Formation.FormationsStringSize[i] + 1];
+                        var wordBytes = Encoding.ASCII.GetBytes(Formations[i].Name);
+                        Array.Copy(wordBytes, blankBytes, wordBytes.Length);
+                        fs.Write(blankBytes, 0, blankBytes.Length);
                     }
-                    // Output Subs1
-                    fs.Write(Formations[formationNo].subs1, 0, 5);
-                    // Output Running To
-                    for (int i = 0; i < 11; i++)
-                    {
-                        fs.WriteByte((byte)players[i].RunningTo);
-                    }
-                    // Output Subs2
-                    fs.Write(Formations[formationNo].subs2, 0, 5);
-                }
 
-                MessageBox.Show("Saved Successfully!", "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Write the new formations
+                    fs.Seek(0x153EE4, SeekOrigin.Begin);
+                    for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
+                    {
+                        // Output Players
+                        var players = Formations[formationNo].Players;
+                        for (int i = 0; i < 11; i++)
+                        {
+                            fs.WriteByte((byte)players[i].Position);
+                        }
+                        // Output Subs1
+                        fs.Write(Formations[formationNo].subs1, 0, 5);
+                        // Output Running To
+                        for (int i = 0; i < 11; i++)
+                        {
+                            fs.WriteByte((byte)players[i].RunningTo);
+                        }
+                        // Output Subs2
+                        fs.Write(Formations[formationNo].subs2, 0, 5);
+                    }
+
+                    MessageBox.Show("Saved Successfully!", "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("An error occurred when saving the executable: " + textBoxExeFile.Text + "\r\n\r\nError: " + ex.Message, "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
