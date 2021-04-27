@@ -6,3 +6,5 @@ C:\development\CM9798TacticsEditor\CM9798TacticsEditor\obj\Release\CM9798Tactics
 C:\development\CM9798TacticsEditor\CM9798TacticsEditor\obj\Release\CM9798TacticsEditor.csproj.CoreCompileInputs.cache
 C:\development\CM9798TacticsEditor\CM9798TacticsEditor\obj\Release\CM9798TacticsEditor.exe
 C:\development\CM9798TacticsEditor\CM9798TacticsEditor\obj\Release\CM9798TacticsEditor.pdb
+C:\development\CM9798TacticsEditor\CM9798TacticsEditor\bin\Release\CM9798TacticsEditor.exe.config
+C:\development\CM9798TacticsEditor\CM9798TacticsEditor\obj\Release\CM9798TacticsEditor.csprojAssemblyReference.cache
