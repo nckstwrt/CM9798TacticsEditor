@@ -5,7 +5,6 @@ using System.Data;
 using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -48,6 +47,16 @@ namespace CM9798TacticsEditor
         // Data 
         List<Formation> Formations = new List<Formation>();
         int selectedFormation = -1;
+
+        // Variables for dragging players
+        Player selectedPlayer = null;
+        bool selectedIsRunning = false;
+        int currentMouseX = 0;
+        int currentMouseY = 0;
+        int mouseOffsetX = 0;
+        int mouseOffsetY = 0;
+        int selectedRectWidth = 75;
+        int selectedRectHeight = 26;
 
         public TacticsEditor()
         {
@@ -118,10 +127,19 @@ namespace CM9798TacticsEditor
                     // If it has a running line, draw it
                     if (linex1 != -1)
                     {
+                        // Draw green line
                         g.DrawLine(dashGreenLinePen, pitchX + linex1, pitchY + liney1, pitchX + linex2, pitchY + liney2);
+                        
+                        // Draw yellow cross
                         g.DrawLine(yellowLinePen, (pitchX + linex2) - 2, (pitchY + liney2) - 2, (pitchX + linex2) + 2, (pitchY + liney2) + 2);
                         g.DrawLine(yellowLinePen, (pitchX + linex2) - 2, (pitchY + liney2) + 2, (pitchX + linex2) + 2, (pitchY + liney2) - 2);
                     }
+                }
+
+                // Draw the grey box around selected player
+                if (selectedPlayer != null)
+                {
+                    g.DrawRectangle(dashGreyLinePen, new Rectangle(currentMouseX - mouseOffsetX, currentMouseY - mouseOffsetY, selectedRectWidth, selectedRectHeight));
                 }
             }
             else
@@ -143,7 +161,7 @@ namespace CM9798TacticsEditor
         {
             int x, y, linex1, liney1, linex2, liney2;
             GetPlayerCoords(player, formation, out x, out y, out linex1, out liney1, out linex2, out liney2);
-            return new Rectangle((pitchX + x) - 28, (pitchY + y) - 20, 56, 26);
+            return new Rectangle((pitchX + x) - (selectedRectWidth / 2), (pitchY + y) - 20, selectedRectWidth, selectedRectHeight);
         }
 
         void GetPlayerCoords(Player player, Formation formation, out int x, out int y, out int linex1, out int liney1, out int linex2, out int liney2)
@@ -376,7 +394,16 @@ namespace CM9798TacticsEditor
         public static Bitmap LoadImage(string imgFileName)
         {
             var assembly = Assembly.GetExecutingAssembly();
-            string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith(imgFileName));
+            var resNames = assembly.GetManifestResourceNames();
+            string resourceName = "";
+            foreach (var r in resNames)
+            {
+                if (r.EndsWith(imgFileName))
+                {
+                    resourceName = r;
+                    break;
+                }
+            }
             using (var imgStream = assembly.GetManifestResourceStream(resourceName))
             return new Bitmap(imgStream); 
         }
@@ -386,7 +413,16 @@ namespace CM9798TacticsEditor
             var pfc = new PrivateFontCollection();
 
             var assembly = Assembly.GetExecutingAssembly();
-            string resourceName = assembly.GetManifestResourceNames().Single(str => str.EndsWith(fontName));
+            var resNames = assembly.GetManifestResourceNames();
+            string resourceName = "";
+            foreach (var r in resNames)
+            {
+                if (r.EndsWith(fontName))
+                {
+                    resourceName = r;
+                    break;
+                }
+            }
 
             using (var fontStream = assembly.GetManifestResourceStream(resourceName))
             {
@@ -410,6 +446,9 @@ namespace CM9798TacticsEditor
 
         private void TacticsEditor_MouseMove(object sender, MouseEventArgs e)
         {
+            currentMouseX = e.X;
+            currentMouseY = e.Y;
+
             if (e.Y > (pitchY - (tacticsButton.Height + 2)) && e.Y < pitchY && 
                 ((e.X > pitchX && e.X < pitchX + 20) ||
                 (e.X > ((pitchX + tacticsButton.Width)-20) && e.X < (pitchX + tacticsButton.Width)) ))
@@ -418,6 +457,10 @@ namespace CM9798TacticsEditor
             }
             else
                 Cursor.Current = Cursors.Default;
+
+            // Keep drawing on mouse move if we are dragging player
+            if (selectedPlayer != null)
+                Invalidate();
         }
 
         private void TacticsEditor_MouseDown(object sender, MouseEventArgs e)
@@ -431,19 +474,22 @@ namespace CM9798TacticsEditor
             }
 
             // Now check if it's clicked in the players
-            if (selectedFormation != -1)
+            if (selectedFormation != -1 && selectedPlayer == null)
             {
                 var formation = Formations[selectedFormation];
                 for (int i = 0; i < formation.Players.Count; i++)
                 {
-                    int x, y, linex1, liney1, linex2, liney2;
                     var player = formation.Players[i];
-                    GetPlayerCoords(player, formation, out x, out y, out linex1, out liney1, out linex2, out liney2);
+                    var rect = GetPlayersRectangle(player, formation);
 
-                    if (e.X >= pitchX + x && e.X <= pitchX + x + 40 &&
-                        e.Y >= pitchY + y && e.Y <= pitchY + y + 40)
+                    if (rect.Contains(e.X, e.Y))
                     {
-                        MessageBox.Show("Yep");
+                        selectedPlayer = player;
+                        selectedIsRunning = e.Button == MouseButtons.Right;
+                        mouseOffsetX = e.X - rect.X;
+                        mouseOffsetY = e.Y - rect.Y;
+                        Invalidate();
+                        break;
                     }
                 }
             }
@@ -472,7 +518,84 @@ namespace CM9798TacticsEditor
                 }
             }
 
+            if (selectedPlayer != null)
+            {
+                // run through all possible positions. Fake players to get the coords
+                var tempPlayer = new Player();
+                bool playerSwapped = false;
+                double score = -1;
+                int closestPos = 0;
+                for (int pos = 0; pos <= 0x1e; pos++)
+                {
+                    tempPlayer.Position = tempPlayer.RunningTo = pos;
+                    var rect = GetPlayersRectangle(tempPlayer, Formations[selectedFormation]);
+
+                    // Check if position is occupied
+                    bool positionOccupied = false;
+                    foreach (var possiblePlayer in Formations[selectedFormation].Players)
+                    {
+                        if (pos == possiblePlayer.Position)
+                        {
+                            positionOccupied = true;
+                            break;
+                        }
+                    }
+
+                    // If not occupied, make it easier to move into
+                    if (!positionOccupied)
+                        rect.Inflate(5, 15);
+
+                    if (rect.Contains(e.X, e.Y))
+                    {
+                        var newScore = Math.Abs(GetDistance(e.X, e.Y, rect.X + (rect.Width / 2), rect.Y + (rect.Height / 2)));
+                        if (score == -1 || newScore < score)
+                        {
+                            closestPos = pos;
+                            score = newScore;
+                        }
+                    }
+                }
+
+                if (score != -1)
+                {
+                    if (selectedIsRunning)
+                    {
+                        selectedPlayer.RunningTo = closestPos;
+                    }
+                    else
+                    {
+                        // See if another player already has this pos
+                        var currentPlayers = Formations[selectedFormation].Players;
+                        foreach (var currentPlayer in currentPlayers)
+                        {
+                            if (currentPlayer.Position == tempPlayer.Position)
+                            {
+                                // Swap players
+                                var savedPos = currentPlayer.Position;
+                                var savedRunning = currentPlayer.RunningTo;
+                                currentPlayer.Position = selectedPlayer.Position;
+                                currentPlayer.RunningTo = selectedPlayer.RunningTo;
+                                selectedPlayer.Position = savedPos;
+                                selectedPlayer.RunningTo = savedRunning;
+                                playerSwapped = true;
+                            }
+                        }
+                        if (!playerSwapped)
+                        {
+                            selectedPlayer.Position = selectedPlayer.RunningTo = closestPos;
+                        }
+                    }
+                }
+
+                selectedPlayer = null;
+            }
+
             Invalidate();
+        }
+
+        private double GetDistance(double x1, double y1, double x2, double y2)
+        {
+            return Math.Sqrt(Math.Pow((x2 - x1), 2) + Math.Pow((y2 - y1), 2));
         }
 
         private void buttonBrowse_Click(object sender, EventArgs e)
