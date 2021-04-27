@@ -2,6 +2,6 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/bin/Debug
-/obj/Debug
+/bin
+/obj
 /CM9798TacticsEditor.csproj.user
