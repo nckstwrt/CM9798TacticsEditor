@@ -568,7 +568,7 @@ namespace CM9798TacticsEditor
                         var currentPlayers = Formations[selectedFormation].Players;
                         foreach (var currentPlayer in currentPlayers)
                         {
-                            if (currentPlayer.Position == tempPlayer.Position)
+                            if (currentPlayer.Position == closestPos)
                             {
                                 // Swap players
                                 var savedPos = currentPlayer.Position;
@@ -615,6 +615,17 @@ namespace CM9798TacticsEditor
         {
             using (var fs = File.Open(textBoxExeFile.Text, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
+                // Read the formation names
+                string[] ourFormationNames = new string[Formation.Formations.Length];
+                fs.Seek(0x149660, SeekOrigin.Begin);
+                for (int i = 0; i < Formation.Formations.Length; i++)
+                {
+                    var blankBytes = new byte[Formation.FormationsStringSize[i] + 1];
+                    fs.Read(blankBytes, 0, blankBytes.Length);
+                    ourFormationNames[i] = Encoding.ASCII.GetString(blankBytes);
+                }
+
+                // Read Positions
                 var grid = new byte[(5 * 6) + 1];
                 var grid2 = new byte[(5 * 6) + 1];
 
@@ -625,8 +636,8 @@ namespace CM9798TacticsEditor
                 for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
                 {
                     var formation = new Formation();
-                    formation.Name = Formation.Formations[formationNo];
-                    formation.MaxNameSize = Formation.Formations[formationNo].Length;
+                    formation.Name = ourFormationNames[formationNo];
+                    formation.MaxNameSize = Formation.FormationsStringSize[formationNo];
 
                     for (int i = 0; i < 11; i++)
                     {
@@ -660,6 +671,45 @@ namespace CM9798TacticsEditor
                 Invalidate();
             }
         }
+
+        private void buttonSave_Click(object sender, EventArgs e)
+        {
+            using (var fs = File.Open(textBoxExeFile.Text, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite))
+            {
+                // Write new formation names
+                fs.Seek(0x149660, SeekOrigin.Begin);
+                for (int i = 0; i < Formations.Count; i++)
+                {
+                    var blankBytes = new byte[Formation.FormationsStringSize[i] + 1];
+                    var wordBytes = Encoding.ASCII.GetBytes(Formations[i].Name);
+                    Array.Copy(wordBytes, blankBytes, wordBytes.Length);
+                    fs.Write(blankBytes, 0, blankBytes.Length);
+                }
+
+                // Write the new formations
+                fs.Seek(0x153EE4, SeekOrigin.Begin);
+                for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
+                {
+                    // Output Players
+                    var players = Formations[formationNo].Players;
+                    for (int i = 0; i < 11; i++)
+                    {
+                        fs.WriteByte((byte)players[i].Position);
+                    }
+                    // Output Subs1
+                    fs.Write(Formations[formationNo].subs1, 0, 5);
+                    // Output Running To
+                    for (int i = 0; i < 11; i++)
+                    {
+                        fs.WriteByte((byte)players[i].RunningTo);
+                    }
+                    // Output Subs2
+                    fs.Write(Formations[formationNo].subs2, 0, 5);
+                }
+
+                MessageBox.Show("Saved Successfully!", "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
     }
 
     public class Formation
@@ -685,6 +735,29 @@ namespace CM9798TacticsEditor
             "4-3-3 Attacking",
             "4-2-4 Attacking",
             "All Out Attack"
+        };
+
+        public static int[] FormationsStringSize = new int[]
+        {
+            "Ultra Defensive".Length,
+            "5-3-2 Defensive".Length,
+            "Sweeper Defensive".Length+2,
+            "4-4-2 Defensive".Length,
+            "4-5-1 Defensive".Length,
+            "Counter Attack".Length+1,
+            "5-3-2 Formation".Length,
+            "3-5-2 Sweeper".Length+2,
+            "3-5-2 Formation".Length,
+            "3-1-3-3 Formation".Length+2,
+            "4-2-2 Formation".Length,
+            "Christmas Tree".Length+1,
+            "Diamond Formation".Length+2,
+            "4-3-3 Formation".Length,
+            "5-3-2 Attacking".Length,
+            "4-4-2 Attacking".Length,
+            "4-3-3 Attacking".Length,
+            "4-2-4 Attacking".Length,
+            "All Out Attack".Length+1
         };
 
         public Formation()
