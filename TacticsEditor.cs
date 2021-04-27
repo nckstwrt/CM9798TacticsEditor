@@ -339,7 +339,7 @@ namespace CM9798TacticsEditor
                     }
                     else
                     {
-                        liney2 -= 8;
+                        liney2 -= 24;
                         liney1 += 8;
                     }
                 }
