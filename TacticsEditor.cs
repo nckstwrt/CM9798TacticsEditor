@@ -700,6 +700,7 @@ namespace CM9798TacticsEditor
             if (selectedFormation != -1)
             {
                 Formations[selectedFormation].Name = CleanString(textBoxTacticName.Text);
+                UpdateTacticsHex();
                 Invalidate();
             }
         }
@@ -813,6 +814,12 @@ namespace CM9798TacticsEditor
                 // Do nothing - probably bad input
             }
         }
+
+        private void buttonReset_Click(object sender, EventArgs e)
+        {
+            if (selectedFormation >= 0)
+                textBoxTacticsHex.Text = Formation.OriginalFormations[selectedFormation];
+        }
     }
 
     public class Formation
@@ -871,7 +878,7 @@ namespace CM9798TacticsEditor
             "442D",
             "451D",
             "CNTN",
-            "CNTN",
+            "532N",
             "352SW",
             "352N",
             "AJAX",
@@ -884,6 +891,29 @@ namespace CM9798TacticsEditor
             "433VA",
             "424VA",
             "VATT"
+        };
+
+        public static string[] OriginalFormations = new string[]
+        {
+            "Ultra Defensive:000A060903070E0C0D121C1200121C1C0019150403020E0C0D171C1200121C1C",
+            "5‑3‑2 Defensive:000A06090307130D1D1B111C00121C08001915090D071E0D1D1B1A1C00121C08",
+            "Sweeper Defensive:000F0B09070313121D1B111C00121C08001E1A09070D18121D1B161C00121C08",
+            "4‑4‑2 Defensive:000A0609070E140C1D1B101C00081212000A0609071814161D1B101C00081212",
+            "4‑5‑1 Defensive:000A0609070D14131C11101C001C1208000A0609070D181D1C1B161C001C1208",
+            "Counter Attack:000F0B0809070E0C13111C1C001C0812001E1A08090719151D1B171C001C0812",
+            "5‑3‑2 Formation:000F0B09080713121D1B111C00121C0800191509080713171D1B111C00121C08",
+            "3‑5‑2 Sweeper:00090307131114121D1B101C00081C0800090D07131114171D1B101C00081C08",
+            "3‑5‑2 Formation:00090807131114121D1B101C00081C0800090807131114171D1B101C00081C08",
+            "3‑1‑3‑3 Formation:000A06080D12131119151C0008121C1C000F0B0808171D1B19151C0008121C1C",
+            "4‑4‑2 Formation:000A0609071314111D1B101C00081212000A060907131E111D1B1A1C00081212",
+            "Christmas Tree:000A0609070D14171C12101C00081212000F0B09070D191C1C17151C00081212",
+            "Diamond Formation:000A0609070D14171D1B101C00081212000A0609071219121D1B151C00081212",
+            "4‑3‑3 Formation:000A06090712131C1D1B111200081C12000F0B090712131C1E1A111200081C12",
+            "5‑3‑2 Attacking:000F0B09080713171D1B111C00121C080019150903071E1C1D1B1A1C00121C08",
+            "4‑4‑2 Attacking:000A0609071319111D1B151C00081212000F0B09070E1E0C1D1B1A1C00081212",
+            "4‑3‑3 Attacking:000A06090712131C1D1B111200081C120014100907121E1C1D1B1A1200081C12",
+            "4‑2‑4 Attacking:000A060907131E111D1B1A1200081208000A0609070E180C1D1B161200081208",
+            "All Out Attack:000907081410121A1E1D1B0800120A06000A06080E0C121A1E1D1B0800120A06"
         };
 
         public Formation()

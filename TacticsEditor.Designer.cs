@@ -119,6 +119,7 @@ namespace CM9798TacticsEditor
             this.buttonReset.TabIndex = 5;
             this.buttonReset.Text = "Reset";
             this.buttonReset.UseVisualStyleBackColor = true;
+            this.buttonReset.Click += new System.EventHandler(this.buttonReset_Click);
             // 
             // TacticsEditor
             // 
