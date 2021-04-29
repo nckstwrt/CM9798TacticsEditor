@@ -1,6 +1,8 @@
 # CM 97/98 Tactics Editor v1.01
 Tactics Editor for Championship Manager 97/98
 
+Download: https://github.com/nckstwrt/CM9798TacticsEditor/releases/download/v1.01/CM9798TacticsEditorV101.zip
+
 ![alt text](https://i.imgur.com/wPW0z9O.png)
 
 Appears in game as:
