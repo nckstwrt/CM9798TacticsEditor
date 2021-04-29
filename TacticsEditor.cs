@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Text;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -112,7 +113,7 @@ namespace CM9798TacticsEditor
             if (selectedFormation >= 0)
             {
                 var formation = Formations[selectedFormation];
-                DrawTacticSelectButton(g, formation.Name, formation.MaxNameSize);
+                DrawTacticSelectButton(g, formation.Name, formation.MaxNameSize, Formation.FormationCode[selectedFormation]);
 
                 // Draw the players
                 for (int i = 0; i < formation.Players.Count; i++)
@@ -143,7 +144,7 @@ namespace CM9798TacticsEditor
                 }
             }
             else
-                DrawTacticSelectButton(g, "Select Tactic", "Select Tactic".Length);
+                DrawTacticSelectButton(g, "Select Tactic", "Select Tactic".Length, "");
         }
 
         /*
@@ -346,7 +347,7 @@ namespace CM9798TacticsEditor
             }
         }
 
-        void DrawTacticSelectButton(Graphics g, string tacticName, int maxsize)
+        void DrawTacticSelectButton(Graphics g, string tacticName, int maxsize, string shortCode)
         {
             g.DrawImageUnscaled(mouseDownInTacticsButton ? tacticsButtonPressed : tacticsButton, pitchX, pitchY - (tacticsButton.Height + 2));
 
@@ -364,6 +365,7 @@ namespace CM9798TacticsEditor
 
             textBoxTacticName.Text = tacticName;
             textBoxTacticName.MaxLength = maxsize;
+            textBoxShortCode.Text = shortCode;
         }
 
         void DrawPlayer(Graphics g, string number, string name, int x, int y)
@@ -590,6 +592,7 @@ namespace CM9798TacticsEditor
                 selectedPlayer = null;
             }
 
+            UpdateTacticsHex();
             Invalidate();
         }
 
@@ -654,29 +657,19 @@ namespace CM9798TacticsEditor
                     for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
                     {
                         var formation = new Formation();
-                        formation.Name = ourFormationNames[formationNo];
+                        formation.Name = CleanString(ourFormationNames[formationNo]);
                         formation.MaxNameSize = Formation.FormationsStringSize[formationNo];
 
-                        for (int i = 0; i < 11; i++)
-                        {
-                            formation.Players[i].Position = fs.ReadByte();
-                        }
-
-                        // Read Subs1
-                        fs.Read(formation.subs1, 0, 5);
-
-                        for (int i = 0; i < 11; i++)
-                        {
-                            formation.Players[i].RunningTo = fs.ReadByte();
-                        }
-
-                        // Read Subs2
-                        fs.Read(formation.subs2, 0, 5);
+                        var byteData = new byte[11 + 5 + 11 + 5];
+                        fs.Read(byteData, 0, byteData.Length);
+                        BytesToFormation(formation, byteData);
 
                         Formations.Add(formation);
                     }
 
                     selectedFormation = 0;
+
+                    UpdateTacticsHex();
                     Invalidate();
                 }
             }
@@ -686,11 +679,27 @@ namespace CM9798TacticsEditor
             }
         }
 
+        string CleanString(string s)
+        {
+            var x = s.IndexOf('\0');
+            return x == -1 ? s : s.Substring(0, x);
+        }
+
+        private void UpdateTacticsHex()
+        {
+            if (Formations.Count != 0)
+            {
+                var formation = Formations[selectedFormation];
+                var dataBytes = FormationToBytes(formation);
+                textBoxTacticsHex.Text = CleanString(formation.Name).Replace(" ", "\u00A0").Replace("-", "\u2011") + ":" + BytesToHexString(dataBytes);
+            }
+        }
+
         private void textBoxTacticName_TextChanged(object sender, EventArgs e)
         {
             if (selectedFormation != -1)
             {
-                Formations[selectedFormation].Name = textBoxTacticName.Text;
+                Formations[selectedFormation].Name = CleanString(textBoxTacticName.Text);
                 Invalidate();
             }
         }
@@ -715,21 +724,8 @@ namespace CM9798TacticsEditor
                     fs.Seek(0x153EE4, SeekOrigin.Begin);
                     for (int formationNo = 0; formationNo < Formation.Formations.Length; formationNo++)
                     {
-                        // Output Players
-                        var players = Formations[formationNo].Players;
-                        for (int i = 0; i < 11; i++)
-                        {
-                            fs.WriteByte((byte)players[i].Position);
-                        }
-                        // Output Subs1
-                        fs.Write(Formations[formationNo].subs1, 0, 5);
-                        // Output Running To
-                        for (int i = 0; i < 11; i++)
-                        {
-                            fs.WriteByte((byte)players[i].RunningTo);
-                        }
-                        // Output Subs2
-                        fs.Write(Formations[formationNo].subs2, 0, 5);
+                        var byteData = FormationToBytes(Formations[formationNo]);
+                        fs.Write(byteData, 0, byteData.Length);
                     }
 
                     MessageBox.Show("Saved Successfully!", "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -738,6 +734,83 @@ namespace CM9798TacticsEditor
             catch (Exception ex)
             {
                 MessageBox.Show("An error occurred when saving the executable: " + textBoxExeFile.Text + "\r\n\r\nError: " + ex.Message, "CM97/98 Tactics Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        void BytesToFormation(Formation formation, byte [] bytes)
+        {
+            var players = formation.Players;
+            for (int i = 0; i < 11; i++)
+            {
+                players[i].Position = bytes[i];
+            }
+            Array.Copy(bytes, 11, formation.subs1, 0, 5);
+            for (int i = 0; i < 11; i++)
+            {
+                players[i].RunningTo = bytes[i + 11 + 5];
+            }
+            Array.Copy(bytes, 11 + 5 + 11, formation.subs2, 0, 5);
+        }
+
+        byte[] FormationToBytes(Formation formation)
+        {
+            byte[] ret = new byte[11 + 5 + 11 + 5];
+            var players = formation.Players;
+            for (int i = 0; i < 11; i++)
+            {
+                ret[i] = (byte)players[i].Position;
+            }
+            Array.Copy(formation.subs1, 0, ret, 11, 5);
+            for (int i = 0; i < 11; i++)
+            {
+                ret[11 + 5 + i] = (byte)players[i].RunningTo;
+            }
+            Array.Copy(formation.subs2, 0, ret, 11 + 5 + 11, 5);
+            return ret;
+        }
+
+        byte[] HexStringToBytes(string hexString)
+        {
+            byte[] ret = new byte[hexString.Length / 2];
+            hexString = hexString.ToLower();
+            for (int i = 0; i < hexString.Length; i += 2)
+            {
+                ret[i / 2] = byte.Parse(hexString.Substring(i, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            }
+            return ret;
+        }
+
+        string BytesToHexString(byte[] bytes)
+        {
+            return BitConverter.ToString(bytes).Replace("-", string.Empty);
+        }
+
+        private void textBoxTacticsHex_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                var hexString = textBoxTacticsHex.Text;
+                if (hexString.Length > 0)
+                {
+                    var idx = hexString.IndexOf(':') == -1 ? 0 : hexString.IndexOf(':');
+                    if (idx != 0)
+                    {
+                        var tacticName = hexString.Substring(0, idx).Replace("\u00A0", " ").Replace("\u2011", "-");
+                        if (tacticName.Length > 0 && tacticName.Length <= Formation.FormationsStringSize[selectedFormation])
+                            textBoxTacticName.Text = hexString.Substring(0, idx).Replace("\u00A0", " ").Replace("\u2011", "-");
+                    }
+                    hexString = hexString.Substring(idx + 1);
+                    if (hexString.Length == 64)
+                    {
+                        var dataBytes = HexStringToBytes(hexString);
+                        BytesToFormation(Formations[selectedFormation], dataBytes);
+                        Invalidate();
+                    }
+                }
+            }
+            catch
+            {
+                // Do nothing - probably bad input
             }
         }
     }
@@ -788,6 +861,29 @@ namespace CM9798TacticsEditor
             "4-3-3 Attacking".Length,
             "4-2-4 Attacking".Length,
             "All Out Attack".Length+1
+        };
+
+        public static string[] FormationCode = new string[]
+        {
+            "VDEF",
+            "532VD",
+            "SWPVD",
+            "442D",
+            "451D",
+            "CNTN",
+            "CNTN",
+            "352SW",
+            "352N",
+            "AJAX",
+            "442N",
+            "CMSN",
+            "DIAN",
+            "433N",
+            "532A",
+            "442A",
+            "433VA",
+            "424VA",
+            "VATT"
         };
 
         public Formation()

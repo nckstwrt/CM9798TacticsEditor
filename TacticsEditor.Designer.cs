@@ -35,6 +35,9 @@ namespace CM9798TacticsEditor
             this.textBoxExeFile = new System.Windows.Forms.TextBox();
             this.textBoxTacticName = new System.Windows.Forms.TextBox();
             this.buttonSave = new System.Windows.Forms.Button();
+            this.textBoxShortCode = new System.Windows.Forms.TextBox();
+            this.textBoxTacticsHex = new System.Windows.Forms.TextBox();
+            this.buttonReset = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -80,7 +83,7 @@ namespace CM9798TacticsEditor
             // 
             // buttonSave
             // 
-            this.buttonSave.Location = new System.Drawing.Point(227, 66);
+            this.buttonSave.Location = new System.Drawing.Point(236, 529);
             this.buttonSave.Name = "buttonSave";
             this.buttonSave.Size = new System.Drawing.Size(75, 23);
             this.buttonSave.TabIndex = 2;
@@ -88,12 +91,44 @@ namespace CM9798TacticsEditor
             this.buttonSave.UseVisualStyleBackColor = true;
             this.buttonSave.Click += new System.EventHandler(this.buttonSave_Click);
             // 
+            // textBoxShortCode
+            // 
+            this.textBoxShortCode.BackColor = System.Drawing.SystemColors.ControlDark;
+            this.textBoxShortCode.Location = new System.Drawing.Point(231, 67);
+            this.textBoxShortCode.Name = "textBoxShortCode";
+            this.textBoxShortCode.ReadOnly = true;
+            this.textBoxShortCode.Size = new System.Drawing.Size(71, 20);
+            this.textBoxShortCode.TabIndex = 3;
+            this.textBoxShortCode.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            // 
+            // textBoxTacticsHex
+            // 
+            this.textBoxTacticsHex.BackColor = System.Drawing.SystemColors.ControlLight;
+            this.textBoxTacticsHex.Location = new System.Drawing.Point(6, 529);
+            this.textBoxTacticsHex.Multiline = true;
+            this.textBoxTacticsHex.Name = "textBoxTacticsHex";
+            this.textBoxTacticsHex.Size = new System.Drawing.Size(224, 48);
+            this.textBoxTacticsHex.TabIndex = 4;
+            this.textBoxTacticsHex.TextChanged += new System.EventHandler(this.textBoxTacticsHex_TextChanged);
+            // 
+            // buttonReset
+            // 
+            this.buttonReset.Location = new System.Drawing.Point(236, 554);
+            this.buttonReset.Name = "buttonReset";
+            this.buttonReset.Size = new System.Drawing.Size(75, 23);
+            this.buttonReset.TabIndex = 5;
+            this.buttonReset.Text = "Reset";
+            this.buttonReset.UseVisualStyleBackColor = true;
+            // 
             // TacticsEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ControlDark;
-            this.ClientSize = new System.Drawing.Size(314, 528);
+            this.ClientSize = new System.Drawing.Size(314, 584);
+            this.Controls.Add(this.buttonReset);
+            this.Controls.Add(this.textBoxTacticsHex);
+            this.Controls.Add(this.textBoxShortCode);
             this.Controls.Add(this.buttonSave);
             this.Controls.Add(this.textBoxTacticName);
             this.Controls.Add(this.groupBox1);
@@ -120,6 +155,9 @@ namespace CM9798TacticsEditor
         private System.Windows.Forms.TextBox textBoxExeFile;
         private System.Windows.Forms.TextBox textBoxTacticName;
         private System.Windows.Forms.Button buttonSave;
+        private System.Windows.Forms.TextBox textBoxShortCode;
+        private System.Windows.Forms.TextBox textBoxTacticsHex;
+        private System.Windows.Forms.Button buttonReset;
     }
 }
 
